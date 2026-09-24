@@ -5,11 +5,12 @@
 <section class="profile-hero">
   <span class="avatar large">{{ student.initials }}</span>
   <div><p class="eyebrow">{{ student.get_level_display }}</p><h2>{{ student }}</h2><p class="muted">{% if student.phone %}{{ student.phone }}{% else %}Telefon eklenmemiş{% endif %} · {% if student.is_active %}Aktif öğrenci{% else %}Pasif öğrenci{% endif %}</p></div>
-  <a class="button secondary" href="{% url 'student_update' student.id %}">Düzenle</a>
+  <a class="button secondary" href="{% url 'student_development' student.id %}">Gelişim</a><a class="button secondary" href="{% url 'student_update' student.id %}">Düzenle</a>
   <form method="post" action="{% url 'student_delete' student.id %}" onsubmit="return confirm('Bu öğrenciyi ve ilişkili ders kayıtlarını silmek istediğinize emin misiniz?');">{% csrf_token %}<button class="button danger" type="submit">Sil</button></form>
 </section>
 <div class="profile-grid">
   <section class="panel"><div class="panel-head"><div><p class="eyebrow">Geçmiş</p><h2>Dersler</h2></div></div>{% for attendance in attendances %}<div class="history-row"><div><strong>{{ attendance.lesson.starts_at|date:'d.m.Y · H:i' }}</strong><small>{{ attendance.lesson.location.name }}</small></div><span class="badge">{{ attendance.get_status_display|default:'Yoklama bekliyor' }}</span></div>{% empty %}<div class="empty compact"><p>Henüz ders kaydı yok.</p></div>{% endfor %}</section>
+  <section class="panel"><div class="panel-head"><div><p class="eyebrow">Gelişim</p><h2>Beceri durumu</h2></div><a class="text-link" href="{% url 'student_development' student.id %}">Düzenle →</a></div>{% for assessment in latest_skills|slice:':4' %}<div class="history-row"><div><strong>{{ assessment.skill.name }}</strong><small>{{ assessment.evaluated_on|date:'d.m.Y' }}</small></div><span class="badge success">{{ assessment.get_status_display }}</span></div>{% empty %}<div class="empty compact"><p>Henüz gelişim değerlendirmesi yok.</p></div>{% endfor %}</section>
   <section class="panel"><div class="panel-head"><div><p class="eyebrow">Ders notları</p><h2>Son çalışmalar</h2></div></div>{% for note in notes %}<article class="note"><small>{{ note.noted_on|date:'d.m.Y' }}</small><p>{{ note.text }}</p></article>{% empty %}<div class="empty compact"><p>Henüz not eklenmemiş.</p></div>{% endfor %}</section>
 </div>
 {% endblock %}

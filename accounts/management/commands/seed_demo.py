@@ -6,7 +6,7 @@ from django.utils import timezone
 
 from accounts.models import User, Workspace
 from lessons.models import Attendance, Lesson, LessonNote, Location
-from students.models import Student
+from students.models import Skill, Student, StudentSkill, StudentSkillHistory
 
 
 class Command(BaseCommand):
@@ -50,6 +50,12 @@ class Command(BaseCommand):
             )
             students.append(student)
 
+        skill_names = ['Denge', 'İleri kayma', 'Fren', 'Dönüş', 'Geri kayma', 'Slalom', 'Cross-over', 'Tek ayak denge']
+        skills = []
+        for order, name in enumerate(skill_names, start=1):
+            skill, _ = Skill.objects.get_or_create(workspace=workspace, name=name, defaults={'sort_order': order})
+            skills.append(skill)
+
         base = timezone.localdate()
         lesson_specs = [
             (-1, time(18, 0), time(19, 0), Lesson.LessonType.ONE_TO_ONE, [students[0]], Lesson.Status.COMPLETED, park),
@@ -76,6 +82,19 @@ class Command(BaseCommand):
                 LessonNote.objects.get_or_create(
                     workspace=workspace, student=lesson_students[0], lesson=lesson,
                     defaults={'text': 'Denge çalışıldı. Fren kontrolü iyi ilerliyor.', 'noted_on': day, 'author': instructor},
+                )
+
+        demo_statuses = [StudentSkill.Status.PRACTICING, StudentSkill.Status.CAN_DO, StudentSkill.Status.GOOD]
+        for index, student in enumerate(students[:3]):
+            for skill_index, skill in enumerate(skills[:4]):
+                status = demo_statuses[(index + skill_index) % len(demo_statuses)]
+                assessment, _ = StudentSkill.objects.get_or_create(
+                    student=student, skill=skill,
+                    defaults={'status': status, 'evaluated_on': base, 'note': 'Demo değerlendirmesi.'},
+                )
+                StudentSkillHistory.objects.get_or_create(
+                    student=student, skill=skill, evaluated_on=base,
+                    defaults={'status': assessment.status, 'note': assessment.note, 'created_by': instructor},
                 )
 
         self.stdout.write(self.style.SUCCESS(f'Demo verileri hazır. Giriş: {demo_email}'))

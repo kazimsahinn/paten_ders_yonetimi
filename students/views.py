@@ -1,11 +1,13 @@
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.db import transaction
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 
 from lessons.models import Attendance, LessonNote
 from .forms import StudentForm
-from .models import Student
+from .models import Skill, Student, StudentSkill, StudentSkillHistory
 
 
 def scoped(request):
@@ -50,7 +52,47 @@ def student_detail(request, student_id):
     student = get_object_or_404(scoped(request), pk=student_id)
     attendances = Attendance.objects.filter(student=student).select_related('lesson', 'lesson__location')[:20]
     notes = LessonNote.objects.filter(student=student).select_related('lesson')[:10]
-    return render(request, 'students/detail.html', {'student': student, 'attendances': attendances, 'notes': notes})
+    latest_skills = student.skill_assessments.select_related('skill').filter(skill__is_active=True)
+    return render(request, 'students/detail.html', {'student': student, 'attendances': attendances, 'notes': notes, 'latest_skills': latest_skills})
+
+
+@login_required
+def student_development(request, student_id):
+    student = get_object_or_404(scoped(request), pk=student_id)
+    skills = list(Skill.objects.filter(workspace=request.user.workspace, is_active=True))
+    assessments = {item.skill_id: item for item in student.skill_assessments.select_related('skill')}
+    if request.method == 'POST':
+        evaluated_on = request.POST.get('evaluated_on') or timezone.localdate().isoformat()
+        try:
+            evaluated_on = timezone.datetime.strptime(evaluated_on, '%Y-%m-%d').date()
+        except ValueError:
+            evaluated_on = timezone.localdate()
+        with transaction.atomic():
+            for skill in skills:
+                status = request.POST.get(f'status_{skill.id}', '')
+                if status not in dict(StudentSkill.Status.choices) or not status:
+                    continue
+                note = request.POST.get(f'note_{skill.id}', '').strip()
+                current = assessments.get(skill.id)
+                if current is None:
+                    current = StudentSkill.objects.create(student=student, skill=skill, status=status, evaluated_on=evaluated_on, note=note)
+                    changed = True
+                else:
+                    changed = current.status != status or current.note != note or current.evaluated_on != evaluated_on
+                    current.status = status
+                    current.evaluated_on = evaluated_on
+                    current.note = note
+                    current.save()
+                if changed:
+                    StudentSkillHistory.objects.create(student=student, skill=skill, status=status, evaluated_on=evaluated_on, note=note, created_by=request.user)
+        messages.success(request, 'Gelişim değerlendirmeleri kaydedildi.')
+        return redirect('student_development', student_id=student.id)
+    history = student.skill_history.select_related('skill', 'created_by')[:30]
+    skill_rows = [{'skill': skill, 'assessment': assessments.get(skill.id)} for skill in skills]
+    return render(request, 'students/development.html', {
+        'student': student, 'skill_rows': skill_rows, 'status_choices': StudentSkill.Status.choices,
+        'history': history, 'today': timezone.localdate(),
+    })
 
 
 @login_required
