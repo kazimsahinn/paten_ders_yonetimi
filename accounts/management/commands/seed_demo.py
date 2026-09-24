@@ -1,4 +1,5 @@
 from datetime import datetime, time, timedelta
+import os
 
 from django.core.management.base import BaseCommand
 from django.utils import timezone
@@ -12,16 +13,22 @@ class Command(BaseCommand):
     help = 'Yerel prototip için örnek eğitmen, öğrenci ve ders verisi oluşturur.'
 
     def handle(self, *args, **options):
+        demo_email = os.getenv('DEMO_EMAIL', 'kazmshn@gmail.com')
+        demo_password = os.getenv('DEMO_PASSWORD')
+        if not demo_password:
+            self.stdout.write(self.style.ERROR('DEMO_PASSWORD .env içinde tanımlı değil.'))
+            return
         workspace, _ = Workspace.objects.get_or_create(name='Paten Akış Demo', defaults={'timezone': 'Europe/Istanbul'})
         instructor, created = User.objects.get_or_create(
-            username='coach@example.com',
-            defaults={'email': 'coach@example.com', 'first_name': 'Deniz', 'last_name': 'Eğitmen', 'workspace': workspace},
+            username=demo_email,
+            defaults={'email': demo_email, 'first_name': 'Deniz', 'last_name': 'Eğitmen', 'workspace': workspace},
         )
-        instructor.email = 'coach@example.com'
+        instructor.username = demo_email
+        instructor.email = demo_email
         instructor.workspace = workspace
         instructor.first_name = instructor.first_name or 'Deniz'
         instructor.last_name = instructor.last_name or 'Eğitmen'
-        instructor.set_password('demo12345')
+        instructor.set_password(demo_password)
         instructor.save()
 
         park, _ = Location.objects.get_or_create(workspace=workspace, name='Caddebostan Sahil', defaults={'address': 'Kadıköy, İstanbul'})
@@ -71,4 +78,4 @@ class Command(BaseCommand):
                     defaults={'text': 'Denge çalışıldı. Fren kontrolü iyi ilerliyor.', 'noted_on': day, 'author': instructor},
                 )
 
-        self.stdout.write(self.style.SUCCESS('Demo verileri hazır. Giriş: coach@example.com / demo12345'))
+        self.stdout.write(self.style.SUCCESS(f'Demo verileri hazır. Giriş: {demo_email}'))
