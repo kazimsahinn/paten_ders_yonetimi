@@ -1,0 +1,6 @@
+{% extends 'base.html' %}
+{% block title %}Arama · Paten Akış{% endblock %}
+{% block page_heading %}Arama sonuçları{% endblock %}
+{% block content %}
+<section class="panel search-page"><div class="panel-head"><div><p class="eyebrow">Öğrenciler</p><h2>{% if query %}"{{ query }}" için sonuçlar{% else %}Öğrenci ara{% endif %}</h2></div><a class="button secondary" href="{% url 'student_list' %}">Tüm öğrenciler</a></div>{% if query %}{% for student in students %}<a class="search-result" href="{% url 'student_detail' student.id %}"><span class="avatar small">{{ student.initials }}</span><span><strong>{{ student }}</strong><small>{% if student.phone %}{{ student.phone }}{% endif %}{% if student.email %} · {{ student.email }}{% endif %}</small></span><span class="badge {% if student.is_active %}success{% endif %}">{% if student.is_active %}Aktif{% else %}Pasif{% endif %}</span></a>{% empty %}<div class="empty"><h3>Sonuç bulunamadı</h3><p>Ad, soyad, telefon veya e-posta ile farklı bir arama deneyin.</p></div>{% endfor %}{% else %}<div class="empty"><div class="empty-icon">⌕</div><h3>Bir öğrenci arayın</h3><p>Üstteki arama alanına ad, telefon veya e-posta yazın.</p></div>{% endif %}</section>
+{% endblock %}

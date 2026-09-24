@@ -27,6 +27,20 @@ def student_list(request):
 
 
 @login_required
+def global_search(request):
+    query = request.GET.get('q', '').strip()
+    students = scoped(request).none()
+    if query:
+        students = scoped(request).filter(
+            Q(first_name__icontains=query)
+            | Q(last_name__icontains=query)
+            | Q(phone__icontains=query)
+            | Q(email__icontains=query)
+        )
+    return render(request, 'students/search.html', {'query': query, 'students': students})
+
+
+@login_required
 def student_create(request):
     form = StudentForm(request.POST or None)
     if request.method == 'POST' and form.is_valid():
