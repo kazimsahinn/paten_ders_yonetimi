@@ -1,3 +1,6 @@
+import calendar as calendar_module
+from datetime import date, timedelta
+
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.db.models import Q
@@ -7,6 +10,9 @@ from django.utils import timezone
 from students.models import Student
 from .forms import LessonForm, LocationForm
 from .models import Attendance, Lesson, LessonNote, Location
+
+MONTH_NAMES = ['', 'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık']
+DAY_NAMES = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz']
 
 
 def scoped(request):
@@ -18,6 +24,66 @@ def lesson_list(request):
     selected_date = request.GET.get('date') or timezone.localdate().isoformat()
     lessons = scoped(request).filter(starts_at__date=selected_date).select_related('location').prefetch_related('attendances__student')
     return render(request, 'lessons/list.html', {'lessons': lessons, 'selected_date': selected_date})
+
+
+@login_required
+def calendar_view(request):
+    mode = request.GET.get('view', 'month')
+    if mode not in {'day', 'week', 'month'}:
+        mode = 'month'
+    try:
+        anchor = date.fromisoformat(request.GET.get('date', ''))
+    except ValueError:
+        anchor = timezone.localdate()
+
+    if mode == 'day':
+        start = end = anchor
+        prev_date = anchor - timedelta(days=1)
+        next_date = anchor + timedelta(days=1)
+    elif mode == 'week':
+        start = anchor - timedelta(days=anchor.weekday())
+        end = start + timedelta(days=6)
+        prev_date = start - timedelta(days=7)
+        next_date = start + timedelta(days=7)
+    else:
+        start = anchor.replace(day=1)
+        end = anchor.replace(day=calendar_module.monthrange(anchor.year, anchor.month)[1])
+        prev_month = (start - timedelta(days=1)).replace(day=1)
+        next_month = (end + timedelta(days=1)).replace(day=1)
+        prev_date = prev_month
+        next_date = next_month
+
+    lessons = list(scoped(request).filter(starts_at__date__gte=start, starts_at__date__lte=end).select_related('location').prefetch_related('attendances__student'))
+    lessons_by_date = {}
+    for lesson in lessons:
+        lessons_by_date.setdefault(timezone.localtime(lesson.starts_at).date(), []).append(lesson)
+
+    days = []
+    cursor = start
+    while cursor <= end:
+        days.append({'date': cursor, 'lessons': lessons_by_date.get(cursor, [])})
+        cursor += timedelta(days=1)
+
+    month_weeks = []
+    if mode == 'month':
+        grid_start = start - timedelta(days=start.weekday())
+        grid_end = end + timedelta(days=6 - end.weekday())
+        cursor = grid_start
+        while cursor <= grid_end:
+            week = []
+            for _ in range(7):
+                week.append({'date': cursor, 'in_month': cursor.month == anchor.month, 'lessons': lessons_by_date.get(cursor, [])})
+                cursor += timedelta(days=1)
+            month_weeks.append(week)
+
+    context = {
+        'mode': mode, 'anchor': anchor, 'start': start, 'end': end,
+        'prev_date': prev_date, 'next_date': next_date, 'days': days,
+        'month_weeks': month_weeks, 'day_names': DAY_NAMES,
+        'month_title': f'{MONTH_NAMES[anchor.month]} {anchor.year}',
+        'today': timezone.localdate(),
+    }
+    return render(request, 'lessons/calendar.html', context)
 
 
 @login_required
