@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+{% block title %}Takvim · Paten Akış{% endblock %}
+{% block page_heading %}Ders takvimi{% endblock %}
+{% block content %}
+<div class="calendar-toolbar">
+  <div class="calendar-nav"><a class="button secondary" href="?view={{ mode }}&date={{ prev_date|date:'Y-m-d' }}">←</a><strong>{% if mode == 'month' %}{{ month_title }}{% elif mode == 'week' %}{{ start|date:'d.m.Y' }} – {{ end|date:'d.m.Y' }}{% else %}{{ anchor|date:'d.m.Y' }}{% endif %}</strong><a class="button secondary" href="?view={{ mode }}&date={{ next_date|date:'Y-m-d' }}">→</a><a class="button secondary" href="?view={{ mode }}&date={{ today|date:'Y-m-d' }}">Bugün</a></div>
+  <div class="calendar-modes"><a class="{% if mode == 'day' %}active{% endif %}" href="?view=day&date={{ anchor|date:'Y-m-d' }}">Gün</a><a class="{% if mode == 'week' %}active{% endif %}" href="?view=week&date={{ anchor|date:'Y-m-d' }}">Hafta</a><a class="{% if mode == 'month' %}active{% endif %}" href="?view=month&date={{ anchor|date:'Y-m-d' }}">Ay</a></div>
+</div>
+{% if mode == 'month' %}
+<section class="panel calendar-panel"><div class="calendar-grid calendar-heading">{% for day_name in day_names %}<span>{{ day_name }}</span>{% endfor %}</div><div class="calendar-grid">{% for week in month_weeks %}{% for day in week %}<div class="calendar-cell {% if not day.in_month %}muted-day{% endif %}{% if day.date == anchor %} today-cell{% endif %}"><strong>{{ day.date|date:'j' }}</strong>{% for lesson in day.lessons %}<a class="calendar-event {{ lesson.status }}" href="{% url 'lesson_detail' lesson.id %}"><b>{{ lesson.starts_at|date:'H:i' }}</b> {{ lesson.get_lesson_type_display }}</a>{% endfor %}</div>{% endfor %}{% endfor %}</div></section>
+{% else %}
+<section class="calendar-list">{% for day in days %}<div class="panel calendar-day"><div class="calendar-day-title"><strong>{{ day.date|date:'l, d F' }}</strong><span>{{ day.lessons|length }} ders</span></div>{% for lesson in day.lessons %}<a class="lesson-card" href="{% url 'lesson_detail' lesson.id %}"><div class="lesson-time">{{ lesson.starts_at|date:'H:i' }}<small>{{ lesson.ends_at|date:'H:i' }}</small></div><div><strong>{{ lesson.get_lesson_type_display }}</strong><span>{% for attendance in lesson.attendances.all %}{{ attendance.student }}{% if not forloop.last %}, {% endif %}{% endfor %}</span><small>{{ lesson.location.name }}</small></div><span class="badge {{ lesson.status }}">{{ lesson.get_status_display }}</span></a>{% empty %}<p class="muted">Bu gün için planlanmış ders yok.</p>{% endfor %}</div>{% empty %}<div class="panel empty"><h3>Ders bulunamadı</h3></div>{% endfor %}</section>
+{% endif %}
+{% endblock %}
