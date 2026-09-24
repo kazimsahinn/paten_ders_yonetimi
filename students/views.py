@@ -7,7 +7,7 @@ from django.utils import timezone
 
 from lessons.models import Attendance, LessonNote
 from .forms import StudentForm
-from .models import Skill, Student, StudentSkill, StudentSkillHistory
+from .models import Skill, Student, StudentLevelHistory, StudentSkill, StudentSkillHistory
 
 
 def scoped(request):
@@ -47,6 +47,7 @@ def student_create(request):
         student = form.save(commit=False)
         student.workspace = request.user.workspace
         student.save()
+        StudentLevelHistory.objects.create(student=student, level=student.level, effective_on=timezone.localdate(), note='İlk öğrenci kaydı.', changed_by=request.user)
         return redirect('student_detail', student_id=student.id)
     return render(request, 'students/form.html', {'form': form, 'title': 'Yeni öğrenci'})
 
@@ -54,9 +55,12 @@ def student_create(request):
 @login_required
 def student_update(request, student_id):
     student = get_object_or_404(scoped(request), pk=student_id)
+    previous_level = student.level
     form = StudentForm(request.POST or None, instance=student)
     if request.method == 'POST' and form.is_valid():
         form.save()
+        if previous_level != student.level:
+            StudentLevelHistory.objects.create(student=student, level=student.level, effective_on=timezone.localdate(), note='Seviye güncellendi.', changed_by=request.user)
         return redirect('student_detail', student_id=student.id)
     return render(request, 'students/form.html', {'form': form, 'title': 'Öğrenciyi düzenle', 'student': student})
 
@@ -67,7 +71,8 @@ def student_detail(request, student_id):
     attendances = Attendance.objects.filter(student=student).select_related('lesson', 'lesson__location')[:20]
     notes = LessonNote.objects.filter(student=student).select_related('lesson')[:10]
     latest_skills = student.skill_assessments.select_related('skill').filter(skill__is_active=True)
-    return render(request, 'students/detail.html', {'student': student, 'attendances': attendances, 'notes': notes, 'latest_skills': latest_skills})
+    level_history = student.level_history.select_related('changed_by')[:10]
+    return render(request, 'students/detail.html', {'student': student, 'attendances': attendances, 'notes': notes, 'latest_skills': latest_skills, 'level_history': level_history})
 
 
 @login_required

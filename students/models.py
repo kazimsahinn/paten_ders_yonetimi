@@ -32,6 +32,18 @@ class Student(models.Model):
         return (self.first_name[:1] + self.last_name[:1]).upper()
 
 
+class StudentLevelHistory(models.Model):
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='level_history')
+    level = models.CharField('Seviye', max_length=20, choices=Student.Level.choices)
+    effective_on = models.DateField('Geçerlilik tarihi')
+    note = models.CharField('Not', max_length=240, blank=True)
+    changed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-effective_on', '-created_at']
+
+
 class Skill(models.Model):
     workspace = models.ForeignKey('accounts.Workspace', on_delete=models.PROTECT, related_name='skills')
     name = models.CharField('Beceri adı', max_length=100)

@@ -6,7 +6,7 @@ from django.utils import timezone
 
 from accounts.models import User, Workspace
 from lessons.models import Attendance, Lesson, LessonNote, Location
-from students.models import Skill, Student, StudentSkill, StudentSkillHistory
+from students.models import Skill, Student, StudentLevelHistory, StudentSkill, StudentSkillHistory
 
 
 class Command(BaseCommand):
@@ -49,6 +49,10 @@ class Command(BaseCommand):
                 defaults={'level': level, 'notes': notes, 'phone': '05XX XXX XX XX'},
             )
             students.append(student)
+            StudentLevelHistory.objects.get_or_create(
+                student=student, level=student.level, effective_on=student.created_at.date(),
+                defaults={'note': 'İlk öğrenci kaydı.', 'changed_by': instructor},
+            )
 
         skill_names = ['Denge', 'İleri kayma', 'Fren', 'Dönüş', 'Geri kayma', 'Slalom', 'Cross-over', 'Tek ayak denge']
         skills = []
