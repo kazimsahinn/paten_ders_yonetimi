@@ -1,9 +1,9 @@
 import calendar as calendar_module
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
@@ -84,6 +84,34 @@ def calendar_view(request):
         'today': timezone.localdate(),
     }
     return render(request, 'lessons/calendar.html', context)
+
+
+@login_required
+def reports_view(request):
+    today = timezone.localdate()
+    selected_month = request.GET.get('month', today.strftime('%Y-%m'))
+    try:
+        month_start = datetime.strptime(selected_month, '%Y-%m').date().replace(day=1)
+    except ValueError:
+        selected_month = today.strftime('%Y-%m')
+        month_start = today.replace(day=1)
+    next_month = (month_start.replace(day=28) + timedelta(days=4)).replace(day=1)
+    month_end = next_month - timedelta(days=1)
+    previous_month = (month_start - timedelta(days=1)).replace(day=1)
+    lessons = scoped(request).filter(starts_at__date__gte=month_start, starts_at__date__lte=month_end)
+    status_counts = {key: lessons.filter(status=key).count() for key, _ in Lesson.Status.choices}
+    status_rows = [{'value': key, 'label': label, 'count': status_counts[key]} for key, label in Lesson.Status.choices]
+    top_students = Student.objects.filter(workspace=request.user.workspace).annotate(
+        lesson_count=Count('attendances__lesson', filter=Q(attendances__lesson__workspace=request.user.workspace, attendances__lesson__starts_at__date__gte=month_start, attendances__lesson__starts_at__date__lte=month_end), distinct=True)
+    ).filter(lesson_count__gt=0).order_by('-lesson_count', 'first_name', 'last_name')[:5]
+    context = {
+        'month_start': month_start, 'month_end': month_end, 'selected_month': selected_month,
+        'previous_month': previous_month, 'next_month': next_month,
+        'lesson_count': lessons.count(), 'active_student_count': Student.objects.filter(workspace=request.user.workspace, is_active=True).count(),
+        'new_student_count': Student.objects.filter(workspace=request.user.workspace, created_at__date__gte=month_start, created_at__date__lte=month_end).count(),
+        'status_counts': status_counts, 'status_rows': status_rows, 'top_students': top_students,
+    }
+    return render(request, 'lessons/reports.html', context)
 
 
 @login_required
