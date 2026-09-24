@@ -13,8 +13,18 @@ class LocationForm(forms.ModelForm):
 
 class LessonForm(forms.ModelForm):
     students = forms.ModelMultipleChoiceField(queryset=Student.objects.none(), label='Öğrenciler', widget=forms.CheckboxSelectMultiple)
-    starts_at = forms.DateTimeField(label='Başlangıç', input_formats=['%Y-%m-%dT%H:%M'])
-    ends_at = forms.DateTimeField(label='Bitiş', input_formats=['%Y-%m-%dT%H:%M'])
+    starts_at = forms.DateTimeField(
+        label='Başlangıç',
+        input_formats=['%Y-%m-%dT%H:%M', '%Y-%m-%dT%H:%M:%S'],
+        localize=False,
+        widget=forms.DateTimeInput(format='%Y-%m-%dT%H:%M', attrs={'type': 'datetime-local'}),
+    )
+    ends_at = forms.DateTimeField(
+        label='Bitiş',
+        input_formats=['%Y-%m-%dT%H:%M', '%Y-%m-%dT%H:%M:%S'],
+        localize=False,
+        widget=forms.DateTimeInput(format='%Y-%m-%dT%H:%M', attrs={'type': 'datetime-local'}),
+    )
 
     class Meta:
         model = Lesson
