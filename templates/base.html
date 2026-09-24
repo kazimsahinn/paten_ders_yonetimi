@@ -1,0 +1,21 @@
+{% load static %}
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Paten Akış{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <link rel="stylesheet" href="{% static 'css/fixes.css' %}">
+</head>
+<body>
+{% if user.is_authenticated %}
+  <div class="app-shell">
+    <aside class="sidebar"><a class="brand" href="{% url 'dashboard' %}"><span class="brand-mark">P</span><span>Paten Akış</span></a><nav>
+      <a href="{% url 'dashboard' %}">Ana sayfa</a><a href="{% url 'lesson_list' %}">Dersler</a><a href="{% url 'student_list' %}">Öğrenciler</a>
+    </nav><div class="sidebar-foot"><span>{{ user.get_full_name|default:user.email }}</span><form method="post" action="{% url 'logout' %}" class="logout-form">{% csrf_token %}<button type="submit">Çıkış</button></form></div></aside>
+    <main class="main-content"><header class="topbar"><div><button type="button" class="back-button" onclick="if (window.history.length > 1) { window.history.back(); } else { window.location.href = '{% url 'dashboard' %}'; }">← Geri</button><span class="eyebrow">{{ user.workspace.name }}</span><h1>{% block page_heading %}Günlük akış{% endblock %}</h1></div><a class="avatar" href="{% url 'student_list' %}">{{ user.first_name|default:'E'|slice:':1' }}</a></header>{% if messages %}{% for message in messages %}<div class="flash">{{ message }}</div>{% endfor %}{% endif %}{% block content %}{% endblock %}</main>
+  </div>
+  <nav class="mobile-nav"><a href="{% url 'dashboard' %}">Ana sayfa</a><a href="{% url 'lesson_list' %}">Dersler</a><a href="{% url 'student_list' %}">Öğrenciler</a></nav>
+{% else %}{% block auth_content %}{% endblock %}{% endif %}
+<script src="{% static 'js/app.js' %}"></script>
+</body></html>
