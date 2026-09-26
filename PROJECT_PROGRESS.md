@@ -19,6 +19,9 @@ Tamamlanan temel işler:
 - Kullanıcı dostu Türkçe 404 sayfası.
 - `DEBUG=0` durumunda Vercel proxy arkasında HTTPS yönlendirmesi ve güvenli oturum/CSRF çerezleri.
 - `accounts.0002_auditlog` ve `students.0004_studentsafetyprofile` migration’ları Supabase’e uygulandı.
+- Vercel preview ve production dağıtımları doğrulandı.
+- Production adresi `https://patentakip.vercel.app` olarak ayarlandı; eski `paten-proje.vercel.app` aliası kaldırıldı.
+- Production giriş sayfası, özel 404 sayfası ve statik dosya sunumu canlı adreste kontrol edildi.
 
 ## Doğrulama
 
@@ -30,8 +33,8 @@ Tamamlanan temel işler:
 
 ## Sıradaki işler
 
-1. Vercel preview yayını ve ortam değişkenlerinin doğrulanması (CLI hesabı giriş bekliyor).
-2. Gerçek telefonla mobil ders günü akışının kontrolü.
-3. Fotoğraf ve Supabase Storage özelliğinin, dosya güvenliği gereksinimleriyle birlikte sonraki fazda ele alınması.
+1. `https://patentakip.vercel.app` adresinde gerçek telefonla mobil ders günü akışını kontrol etmek.
+2. Production için Supabase veritabanı ve şifreleme değişkenlerinin canlı pilot öncesi ayrıca tanımlanıp tanımlanmayacağına karar vermek.
+3. Fotoğraf ve Supabase Storage özelliğini dosya güvenliği gereksinimleriyle birlikte pilot sonrasına bırakmak.
 
 Bu dosya her commit ve push işleminden sonra güncellenecektir.
