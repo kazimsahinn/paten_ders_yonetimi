@@ -22,7 +22,8 @@ Tamamlanan temel işler:
 - Vercel preview ve production dağıtımları doğrulandı.
 - Production adresi `https://patentakip.vercel.app` olarak ayarlandı; eski `paten-proje.vercel.app` aliası kaldırıldı.
 - Production giriş sayfası, özel 404 sayfası ve statik dosya sunumu Vercel CLI bypass testiyle kontrol edildi.
-- Vercel Authentication koruması açık; normal tarayıcı erişimi için deployment protection kararı bekleniyor.
+- Vercel Standard Protection etkinleştirildi; production domain normal tarayıcıda herkese açık, preview/deployment adresleri korumalı.
+- `https://patentakip.vercel.app/giris/` ve özel `/asdfa` 404 sayfası normal tarayıcıda doğrulandı.
 
 ## Doğrulama
 
@@ -34,9 +35,8 @@ Tamamlanan temel işler:
 
 ## Sıradaki işler
 
-1. Production deployment protection ayarını netleştirip `https://patentakip.vercel.app` adresini normal tarayıcıda erişilebilir hale getirmek.
-2. Erişim açıldıktan sonra gerçek telefonla mobil ders günü akışını kontrol etmek.
-3. Production için Supabase veritabanı ve şifreleme değişkenlerinin canlı pilot öncesi ayrıca tanımlanıp tanımlanmayacağına karar vermek.
-4. Fotoğraf ve Supabase Storage özelliğini dosya güvenliği gereksinimleriyle birlikte pilot sonrasına bırakmak.
+1. `https://patentakip.vercel.app` adresinde gerçek telefonla mobil ders günü akışını kontrol etmek.
+2. Production için Supabase veritabanı ve şifreleme değişkenlerinin canlı pilot öncesi ayrıca tanımlanıp tanımlanmayacağına karar vermek.
+3. Fotoğraf ve Supabase Storage özelliğini dosya güvenliği gereksinimleriyle birlikte pilot sonrasına bırakmak.
 
 Bu dosya her commit ve push işleminden sonra güncellenecektir.
