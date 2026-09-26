@@ -5,8 +5,8 @@
 <section class="profile-hero">
   <span class="avatar large">{{ student.initials }}</span>
   <div><p class="eyebrow">{{ student.get_level_display }}</p><h2>{{ student }}</h2><p class="muted">{% if student.phone %}{{ student.phone }}{% else %}Telefon eklenmemiş{% endif %} · {% if student.is_active %}Aktif öğrenci{% else %}Pasif öğrenci{% endif %}</p></div>
-  <a class="button secondary" href="{% url 'student_development' student.id %}">Gelişim</a><a class="button secondary" href="{% url 'student_update' student.id %}">Düzenle</a>
-  <form method="post" action="{% url 'student_delete' student.id %}" onsubmit="return confirm('Bu öğrenciyi ve ilişkili ders kayıtlarını silmek istediğinize emin misiniz?');">{% csrf_token %}<button class="button danger" type="submit">Sil</button></form>
+  <a class="button secondary" href="{% url 'student_development' student.id %}">Gelişim</a><a class="button secondary" href="{% url 'student_safety' student.id %}">Güvenlik bilgileri</a><a class="button secondary" href="{% url 'student_update' student.id %}">Düzenle</a><a class="button secondary" href="{% url 'student_export' student.id %}">Veriyi indir</a>
+  {% if student.is_active %}<form method="post" action="{% url 'student_delete' student.id %}" onsubmit="return confirm('Bu öğrenciyi arşivlemek istediğinize emin misiniz? Ders geçmişi korunur.');">{% csrf_token %}<button class="button danger" type="submit">Arşivle</button></form>{% endif %}
 </section>
 <div class="profile-grid">
   <section class="panel"><div class="panel-head"><div><p class="eyebrow">Geçmiş</p><h2>Dersler</h2></div></div>{% for attendance in attendances %}<div class="history-row"><div><strong>{{ attendance.lesson.starts_at|date:'d.m.Y · H:i' }}</strong><small>{{ attendance.lesson.location.name }}</small></div><span class="badge">{{ attendance.get_status_display|default:'Yoklama bekliyor' }}</span></div>{% empty %}<div class="empty compact"><p>Henüz ders kaydı yok.</p></div>{% endfor %}</section>

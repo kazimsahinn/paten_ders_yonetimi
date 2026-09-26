@@ -7,6 +7,7 @@ from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
+from accounts.audit import record_event
 from students.models import Student
 from .forms import LessonForm, LocationForm
 from .models import Attendance, Lesson, LessonNote, Location
@@ -169,5 +170,11 @@ def attendance_update(request, lesson_id):
             if all(row.status == Attendance.Status.CANCELLED for row in rows):
                 lesson.status = Lesson.Status.CANCELLED
             lesson.save(update_fields=['status', 'updated_at'])
+            record_event(
+                actor=request.user,
+                action='attendance.updated',
+                target=lesson,
+                metadata={'attended': attended, 'absent': absent, 'participant_count': len(rows)},
+            )
         return redirect('lesson_detail', lesson_id=lesson.id)
     return redirect('lesson_detail', lesson_id=lesson.id)

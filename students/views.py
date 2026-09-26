@@ -2,12 +2,14 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db import transaction
 from django.db.models import Q
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
+from accounts.audit import record_event
 from lessons.models import Attendance, LessonNote
-from .forms import StudentForm
-from .models import Skill, Student, StudentLevelHistory, StudentSkill, StudentSkillHistory
+from .forms import StudentForm, StudentSafetyProfileForm
+from .models import Skill, Student, StudentLevelHistory, StudentSafetyProfile, StudentSkill, StudentSkillHistory
 
 
 def scoped(request):
@@ -48,6 +50,7 @@ def student_create(request):
         student.workspace = request.user.workspace
         student.save()
         StudentLevelHistory.objects.create(student=student, level=student.level, effective_on=timezone.localdate(), note='İlk öğrenci kaydı.', changed_by=request.user)
+        record_event(actor=request.user, action='student.created', target=student)
         return redirect('student_detail', student_id=student.id)
     return render(request, 'students/form.html', {'form': form, 'title': 'Yeni öğrenci'})
 
@@ -61,6 +64,7 @@ def student_update(request, student_id):
         form.save()
         if previous_level != student.level:
             StudentLevelHistory.objects.create(student=student, level=student.level, effective_on=timezone.localdate(), note='Seviye güncellendi.', changed_by=request.user)
+        record_event(actor=request.user, action='student.updated', target=student, metadata={'level_changed': previous_level != student.level})
         return redirect('student_detail', student_id=student.id)
     return render(request, 'students/form.html', {'form': form, 'title': 'Öğrenciyi düzenle', 'student': student})
 
@@ -115,11 +119,81 @@ def student_development(request, student_id):
 
 
 @login_required
+def student_export(request, student_id):
+    student = get_object_or_404(scoped(request), pk=student_id)
+    attendances = student.attendances.select_related('lesson', 'lesson__location').all()
+    notes = student.lesson_notes.select_related('lesson').all()
+    skills = student.skill_assessments.select_related('skill').filter(skill__is_active=True)
+    levels = student.level_history.all()
+    payload = {
+        'export_version': 1,
+        'exported_at': timezone.now().isoformat(),
+        'student': {
+            'id': student.id,
+            'first_name': student.first_name,
+            'last_name': student.last_name,
+            'phone': student.phone,
+            'email': student.email,
+            'level': student.level,
+            'notes': student.notes,
+            'is_active': student.is_active,
+            'created_at': student.created_at.isoformat(),
+        },
+        'attendance': [
+            {
+                'lesson_id': item.lesson_id,
+                'date': item.lesson.starts_at.isoformat(),
+                'location': item.lesson.location.name,
+                'status': item.status,
+                'note': item.note,
+            }
+            for item in attendances
+        ],
+        'lesson_notes': [
+            {'lesson_id': item.lesson_id, 'noted_on': item.noted_on.isoformat(), 'text': item.text}
+            for item in notes
+        ],
+        'skills': [
+            {'name': item.skill.name, 'status': item.status, 'evaluated_on': item.evaluated_on.isoformat() if item.evaluated_on else None, 'note': item.note}
+            for item in skills
+        ],
+        'level_history': [
+            {'level': item.level, 'effective_on': item.effective_on.isoformat(), 'note': item.note}
+            for item in levels
+        ],
+    }
+    record_event(actor=request.user, action='student.exported', target=student, metadata={'format': 'json'})
+    response = JsonResponse(payload, json_dumps_params={'ensure_ascii': False})
+    response['Content-Disposition'] = f'attachment; filename="student-{student.id}-data.json"'
+    return response
+
+
+@login_required
+def student_safety(request, student_id):
+    student = get_object_or_404(scoped(request), pk=student_id)
+    profile, _ = StudentSafetyProfile.objects.get_or_create(student=student)
+    if request.method == 'POST':
+        form = StudentSafetyProfileForm(request.POST)
+        if form.is_valid():
+            profile.set_values(**form.cleaned_data)
+            profile.save()
+            record_event(actor=request.user, action='student.safety.updated', target=student, metadata={'fields': ['emergency_contact', 'safety_note']})
+            messages.success(request, 'Güvenlik bilgileri şifreli olarak kaydedildi.')
+            return redirect('student_safety', student_id=student.id)
+    else:
+        record_event(actor=request.user, action='student.safety.viewed', target=student)
+        form = StudentSafetyProfileForm(initial=profile.form_values())
+    return render(request, 'students/safety.html', {'student': student, 'form': form})
+
+
+@login_required
 def student_delete(request, student_id):
     student = get_object_or_404(scoped(request), pk=student_id)
     if request.method == 'POST':
         name = str(student)
-        student.delete()
-        messages.success(request, f'{name} öğrencisi silindi.')
+        student.is_active = False
+        student.save(update_fields=['is_active', 'updated_at'])
+        record_event(actor=request.user, action='student.archived', target=student, metadata={'display_name': name})
+        messages.success(request, f'{name} öğrencisi arşivlendi.')
         return redirect('student_list')
     return redirect('student_detail', student_id=student.id)

@@ -9,5 +9,7 @@ urlpatterns = [
     path('ogrenciler/<int:student_id>/', views.student_detail, name='student_detail'),
     path('ogrenciler/<int:student_id>/duzenle/', views.student_update, name='student_update'),
     path('ogrenciler/<int:student_id>/gelisim/', views.student_development, name='student_development'),
+    path('ogrenciler/<int:student_id>/veri.json', views.student_export, name='student_export'),
+    path('ogrenciler/<int:student_id>/guvenlik/', views.student_safety, name='student_safety'),
     path('ogrenciler/<int:student_id>/sil/', views.student_delete, name='student_delete'),
 ]

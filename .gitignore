@@ -7,3 +7,5 @@ staticfiles/
 media/
 .idea/
 .vscode/
+backups/
+*.log

@@ -1,11 +1,22 @@
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout
+from django.contrib.auth import views as auth_views
 from django.views.decorators.http import require_http_methods
 from django.shortcuts import redirect, render
 from django.utils import timezone
 
+from .audit import record_event
 from lessons.models import Lesson
 from students.models import Student
+
+
+class AccountPasswordChangeView(auth_views.PasswordChangeView):
+    template_name = 'registration/password_change_form.html'
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        record_event(actor=self.request.user, action='account.password_changed')
+        return response
 
 
 @login_required

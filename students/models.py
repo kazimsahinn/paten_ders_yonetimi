@@ -32,6 +32,30 @@ class Student(models.Model):
         return (self.first_name[:1] + self.last_name[:1]).upper()
 
 
+class StudentSafetyProfile(models.Model):
+    student = models.OneToOneField(Student, on_delete=models.CASCADE, related_name='safety_profile')
+    emergency_contact_name_ciphertext = models.TextField(blank=True)
+    emergency_contact_phone_ciphertext = models.TextField(blank=True)
+    safety_note_ciphertext = models.TextField(blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def set_values(self, *, emergency_contact_name='', emergency_contact_phone='', safety_note=''):
+        from .crypto import encrypt_text
+
+        self.emergency_contact_name_ciphertext = encrypt_text(emergency_contact_name)
+        self.emergency_contact_phone_ciphertext = encrypt_text(emergency_contact_phone)
+        self.safety_note_ciphertext = encrypt_text(safety_note)
+
+    def form_values(self):
+        from .crypto import decrypt_text
+
+        return {
+            'emergency_contact_name': decrypt_text(self.emergency_contact_name_ciphertext),
+            'emergency_contact_phone': decrypt_text(self.emergency_contact_phone_ciphertext),
+            'safety_note': decrypt_text(self.safety_note_ciphertext),
+        }
+
+
 class StudentLevelHistory(models.Model):
     student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='level_history')
     level = models.CharField('Seviye', max_length=20, choices=Student.Level.choices)

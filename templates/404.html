@@ -1,0 +1,25 @@
+{% load static %}
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sayfa bulunamadı · Paten Akış</title>
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <link rel="stylesheet" href="{% static 'css/fixes.css' %}">
+</head>
+<body>
+  <main class="auth-page">
+    <section class="auth-card">
+      <span class="brand-mark large">P</span>
+      <p class="eyebrow">PATEN AKIŞ · 404</p>
+      <h1>Bu sayfayı bulamadık.</h1>
+      <p class="muted">Adres yanlış yazılmış olabilir veya sayfa taşınmış olabilir.</p>
+      {% if user.is_authenticated %}
+        <a class="button primary" href="{% url 'dashboard' %}">Ana sayfaya dön</a>
+      {% else %}
+        <a class="button primary" href="{% url 'login' %}">Giriş sayfasına dön</a>
+      {% endif %}
+    </section>
+  </main>
+</body>
+</html>

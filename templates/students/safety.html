@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% block title %}Güvenlik bilgileri · {{ student }}{% endblock %}
+{% block page_heading %}Güvenlik bilgileri{% endblock %}
+{% block content %}
+<section class="panel narrow-panel">
+  <div class="panel-head"><div><p class="eyebrow">{{ student }}</p><h2>Özel ders güvenliği</h2></div><a class="text-link" href="{% url 'student_detail' student.id %}">Profile dön →</a></div>
+  <p class="muted">Bu alan yalnız güvenli ders yürütmek için gerekli kısa bilgileri içerir. Veriler uygulama anahtarıyla şifrelenir; genel öğrenci listelerinde, aramada ve dışa aktarmada gösterilmez.</p>
+  <form method="post" class="stack">{% csrf_token %}
+    {% for field in form %}<label>{{ field.label }}{{ field }}{% for error in field.errors %}<small class="error">{{ error }}</small>{% endfor %}</label>{% endfor %}
+    <button class="button primary" type="submit">Şifreli olarak kaydet</button>
+  </form>
+</section>
+{% endblock %}
