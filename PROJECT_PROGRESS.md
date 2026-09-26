@@ -28,6 +28,7 @@ Tamamlanan temel işler:
 - Mobil menü testi dahil 22 Django testi başarılı; `d4f183f` production’a dağıtıldı.
 - Mobil alt menü beş eşit hücreli, taşmayı engelleyen düzene alındı; `47b66d8` production’a dağıtıldı.
 - Hesap hücresi diğer mobil menü öğeleriyle aynı dikey hizaya alındı; `04aac99` production’a dağıtıldı.
+- Gerçek telefonda mobil ders günü akışı test edildi; menüler ve kayıt işlemleri başarılı.
 - Production ortamına `DATABASE_URL`, `DJANGO_SECRET_KEY` ve `FIELD_ENCRYPTION_KEY` gizli değişkenleri eklendi.
 - Production yeniden dağıtımı sonrası kök URL’nin 302 giriş yönlendirmesi, `/giris/` sayfasının 200 yanıtı ve temiz çalışma zamanı logları doğrulandı; SQLite dosya erişimi kaynaklı 500 hatası giderildi.
 
@@ -41,7 +42,6 @@ Tamamlanan temel işler:
 
 ## Sıradaki işler
 
-1. `https://patentakip.vercel.app` adresinde gerçek telefonla mobil ders günü akışını kontrol etmek.
-2. Fotoğraf ve Supabase Storage özelliğini dosya güvenliği gereksinimleriyle birlikte pilot sonrasına bırakmak.
+1. Fotoğraf ve Supabase Storage özelliğini dosya güvenliği gereksinimleriyle birlikte pilot sonrasına bırakmak.
 
 Bu dosya her commit ve push işleminden sonra güncellenecektir.
