@@ -2,7 +2,7 @@
 
 **Son güncelleme:** 26 Eylül 2026  
 **Dal:** `main`  
-**Son kod commit’i:** `64b42e5` — `Harden preview HTTPS settings`  
+**Son kod commit’i:** `d4f183f` — `Expose account actions in mobile navigation`  
 **Remote durumu:** `origin/main` ile senkron
 
 ## Mevcut faz
@@ -24,6 +24,8 @@ Tamamlanan temel işler:
 - Production giriş sayfası, özel 404 sayfası ve statik dosya sunumu Vercel CLI bypass testiyle kontrol edildi.
 - Vercel Standard Protection etkinleştirildi; production domain normal tarayıcıda herkese açık, preview/deployment adresleri korumalı.
 - `https://patentakip.vercel.app/giris/` ve özel `/asdfa` 404 sayfası normal tarayıcıda doğrulandı.
+- Mobil alt menüye Dersler ve Hesap menüsü eklendi; Hesap menüsünde Raporlar, Parola değiştir ve Çıkış yap seçenekleri bulunuyor.
+- Mobil menü testi dahil 22 Django testi başarılı; `d4f183f` production’a dağıtıldı.
 
 ## Doğrulama
 
