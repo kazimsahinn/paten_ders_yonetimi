@@ -28,6 +28,21 @@ class AuthenticationTests(TestCase):
         response = self.client.get(reverse('student_list'))
         self.assertRedirects(response, f'{reverse("login")}?next={reverse("student_list")}')
 
+    def test_mobile_navigation_contains_lessons_and_account_actions(self):
+        workspace = Workspace.objects.create(name='Test çalışma alanı')
+        user = User.objects.create_user(
+            username='mobile@example.com', email='mobile@example.com', password='GuvenliTest123!', workspace=workspace
+        )
+        self.client.force_login(user)
+
+        response = self.client.get(reverse('dashboard'))
+
+        self.assertContains(response, 'Mobil gezinme')
+        self.assertContains(response, reverse('lesson_list'))
+        self.assertContains(response, reverse('password_change'))
+        self.assertContains(response, reverse('logout'))
+        self.assertContains(response, 'Çıkış yap')
+
     def test_unknown_url_uses_friendly_404_page(self):
         response = self.client.get('/olmayan-sayfa/')
 
