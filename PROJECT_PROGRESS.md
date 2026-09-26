@@ -26,10 +26,12 @@ Tamamlanan temel işler:
 - `https://patentakip.vercel.app/giris/` ve özel `/asdfa` 404 sayfası normal tarayıcıda doğrulandı.
 - Mobil alt menüye Dersler ve Hesap menüsü eklendi; Hesap menüsünde Raporlar, Parola değiştir ve Çıkış yap seçenekleri bulunuyor.
 - Mobil menü testi dahil 22 Django testi başarılı; `d4f183f` production’a dağıtıldı.
+- Production ortamına `DATABASE_URL`, `DJANGO_SECRET_KEY` ve `FIELD_ENCRYPTION_KEY` gizli değişkenleri eklendi.
+- Production yeniden dağıtımı sonrası kök URL’nin 302 giriş yönlendirmesi, `/giris/` sayfasının 200 yanıtı ve temiz çalışma zamanı logları doğrulandı; SQLite dosya erişimi kaynaklı 500 hatası giderildi.
 
 ## Doğrulama
 
-- 21 Django testi başarılı.
+- 22 Django testi başarılı.
 - `manage.py check` başarılı.
 - `manage.py check --deploy` başarılı; yalnızca isteğe bağlı HSTS uyarısı kaldı.
 - Migration kontrolü temiz.
@@ -38,7 +40,6 @@ Tamamlanan temel işler:
 ## Sıradaki işler
 
 1. `https://patentakip.vercel.app` adresinde gerçek telefonla mobil ders günü akışını kontrol etmek.
-2. Production için Supabase veritabanı ve şifreleme değişkenlerinin canlı pilot öncesi ayrıca tanımlanıp tanımlanmayacağına karar vermek.
-3. Fotoğraf ve Supabase Storage özelliğini dosya güvenliği gereksinimleriyle birlikte pilot sonrasına bırakmak.
+2. Fotoğraf ve Supabase Storage özelliğini dosya güvenliği gereksinimleriyle birlikte pilot sonrasına bırakmak.
 
 Bu dosya her commit ve push işleminden sonra güncellenecektir.
