@@ -2,7 +2,7 @@
 
 **Son güncelleme:** 26 Eylül 2026  
 **Dal:** `main`  
-**Son kod commit’i:** `d4f183f` — `Expose account actions in mobile navigation`  
+**Son kod commit’i:** `47b66d8` — `Fix mobile navigation spacing`  
 **Remote durumu:** `origin/main` ile senkron
 
 ## Mevcut faz
@@ -26,6 +26,7 @@ Tamamlanan temel işler:
 - `https://patentakip.vercel.app/giris/` ve özel `/asdfa` 404 sayfası normal tarayıcıda doğrulandı.
 - Mobil alt menüye Dersler ve Hesap menüsü eklendi; Hesap menüsünde Raporlar, Parola değiştir ve Çıkış yap seçenekleri bulunuyor.
 - Mobil menü testi dahil 22 Django testi başarılı; `d4f183f` production’a dağıtıldı.
+- Mobil alt menü beş eşit hücreli, taşmayı engelleyen düzene alındı; `47b66d8` production’a dağıtıldı.
 - Production ortamına `DATABASE_URL`, `DJANGO_SECRET_KEY` ve `FIELD_ENCRYPTION_KEY` gizli değişkenleri eklendi.
 - Production yeniden dağıtımı sonrası kök URL’nin 302 giriş yönlendirmesi, `/giris/` sayfasının 200 yanıtı ve temiz çalışma zamanı logları doğrulandı; SQLite dosya erişimi kaynaklı 500 hatası giderildi.
 
