@@ -2,7 +2,7 @@
 
 **Son güncelleme:** 4 Ekim 2026  
 **Dal:** `main`  
-**Son kod commit’i:** `04aac99` — `Align mobile account menu`  
+**Son kod commit’i:** `986719b` — `Güvenlik ve veri bütünlüğü açıklarını kapat`  
 **Remote durumu:** `origin/main` ile senkron
 
 ## Mevcut faz
@@ -32,10 +32,13 @@ Tamamlanan temel işler:
 - Production ortamına `DATABASE_URL`, `DJANGO_SECRET_KEY` ve `FIELD_ENCRYPTION_KEY` gizli değişkenleri eklendi.
 - Production yeniden dağıtımı sonrası kök URL’nin 302 giriş yönlendirmesi, `/giris/` sayfasının 200 yanıtı ve temiz çalışma zamanı logları doğrulandı; SQLite dosya erişimi kaynaklı 500 hatası giderildi.
 - Supabase `public` şemasındaki 22 Django tablosunda RLS etkinleştirildi; `anon` ve `authenticated` rollerine erişimi reddeden politikalar eklendi ve Security Advisor temizlendi.
+- Giriş ve parola kurtarma uçlarına veritabanı destekli ortak istek sınırı eklendi; çıkış yalnız CSRF korumalı POST isteğine alındı.
+- Yoklama düzeltmelerinde gerekçe ve öğrenci bazlı audit kaydı eklendi; tekrar gönderilen notların çoğalması ve iptal edilen derslerin çakışmalı yeniden açılması engellendi.
+- Geçmiş tarihli gelişim kaydının güncel durumu geriye çekmesi önlendi; yedek geri yüklemesinden sonra PostgreSQL sayaçları sıfırlanıyor.
 
 ## Doğrulama
 
-- 22 Django testi başarılı.
+- 32 Django testi başarılı.
 - `manage.py check` başarılı.
 - `manage.py check --deploy` başarılı; yalnızca isteğe bağlı HSTS uyarısı kaldı.
 - Migration kontrolü temiz.
@@ -44,6 +47,7 @@ Tamamlanan temel işler:
 
 ## Sıradaki işler
 
-1. Fotoğraf ve Supabase Storage özelliğini dosya güvenliği gereksinimleriyle birlikte pilot sonrasına bırakmak.
+1. `accounts.0003_auththrottle` migration’ını Supabase veritabanına uygulamak.
+2. Fotoğraf ve Supabase Storage özelliğini dosya güvenliği gereksinimleriyle birlikte pilot sonrasına bırakmak.
 
 Bu dosya her commit ve push işleminden sonra güncellenecektir.
