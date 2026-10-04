@@ -4,16 +4,18 @@ from pathlib import Path
 from django.core import serializers
 from django.core.management.base import BaseCommand, CommandError
 from django.core.serializers.base import DeserializationError
-from django.db import transaction
+from django.core.management.color import no_style
+from django.db import connection, transaction
 
 from accounts.backup import BACKUP_FORMAT, BACKUP_VERSION
-from accounts.models import AuditLog, User, Workspace
+from accounts.models import AuditLog, AuthThrottle, User, Workspace
 from lessons.models import Attendance, Lesson, LessonNote, Location
 from students.crypto import decrypt_text
 from students.models import Skill, Student, StudentLevelHistory, StudentSafetyProfile, StudentSkill, StudentSkillHistory
 
 
 RESTORE_MODELS = (Workspace, User, Student, StudentSafetyProfile, Skill, Location, Lesson, Attendance, LessonNote, StudentLevelHistory, StudentSkill, StudentSkillHistory, AuditLog)
+SEQUENCE_MODELS = RESTORE_MODELS + (AuthThrottle,)
 
 
 class Command(BaseCommand):
@@ -49,4 +51,8 @@ class Command(BaseCommand):
                 decrypt_text(profile.safety_note_ciphertext)
                 decrypt_text(profile.emergency_contact_name_ciphertext)
                 decrypt_text(profile.emergency_contact_phone_ciphertext)
+            sequence_sql = connection.ops.sequence_reset_sql(no_style(), SEQUENCE_MODELS)
+            with connection.cursor() as cursor:
+                for statement in sequence_sql:
+                    cursor.execute(statement)
         self.stdout.write(self.style.SUCCESS(f'{len(objects)} kayıt geri yüklendi ve şifreli alanlar doğrulandı.'))

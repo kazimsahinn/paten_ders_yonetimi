@@ -1,13 +1,16 @@
 import calendar as calendar_module
 from datetime import date, datetime, timedelta
 
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.views.decorators.http import require_POST
 
 from accounts.audit import record_event
+from accounts.models import Workspace
 from students.models import Student
 from .forms import LessonForm, LocationForm
 from .models import Attendance, Lesson, LessonNote, Location
@@ -121,6 +124,7 @@ def lesson_create(request):
     location_form = LocationForm(request.POST or None, prefix='location')
     if request.method == 'POST' and form.is_valid():
         with transaction.atomic():
+            Workspace.objects.select_for_update().get(pk=request.user.workspace_id)
             lesson = form.save(commit=False)
             lesson.workspace = request.user.workspace
             lesson.instructor = request.user
@@ -147,34 +151,91 @@ def lesson_detail(request, lesson_id):
 
 
 @login_required
+@require_POST
 def attendance_update(request, lesson_id):
-    lesson = get_object_or_404(scoped(request), pk=lesson_id)
-    if request.method == 'POST':
-        with transaction.atomic():
-            rows = list(lesson.attendances.select_for_update().select_related('student'))
-            attended = 0
-            absent = 0
-            for row in rows:
-                status = request.POST.get(f'status_{row.id}', '')
-                if status in dict(Attendance.Status.choices):
-                    row.status = status
-                    row.recorded_at = timezone.now()
-                    row.recorded_by = request.user
-                    row.save(update_fields=['status', 'recorded_at', 'recorded_by'])
-                    attended += status == Attendance.Status.ATTENDED
-                    absent += status == Attendance.Status.ABSENT
-                note = request.POST.get(f'note_{row.id}', '').strip()
-                if note:
-                    LessonNote.objects.create(workspace=request.user.workspace, student=row.student, lesson=lesson, text=note, noted_on=timezone.localdate(), author=request.user)
-            lesson.status = Lesson.Status.COMPLETED if attended else (Lesson.Status.NO_SHOW if absent else Lesson.Status.PLANNED)
-            if all(row.status == Attendance.Status.CANCELLED for row in rows):
-                lesson.status = Lesson.Status.CANCELLED
-            lesson.save(update_fields=['status', 'updated_at'])
-            record_event(
-                actor=request.user,
-                action='attendance.updated',
-                target=lesson,
-                metadata={'attended': attended, 'absent': absent, 'participant_count': len(rows)},
-            )
-        return redirect('lesson_detail', lesson_id=lesson.id)
+    with transaction.atomic():
+        Workspace.objects.select_for_update().get(pk=request.user.workspace_id)
+        lesson = get_object_or_404(scoped(request).select_for_update(), pk=lesson_id)
+        rows = list(lesson.attendances.select_for_update().select_related('student'))
+        valid_statuses = dict(Attendance.Status.choices)
+        submitted = []
+        for row in rows:
+            status = request.POST.get(f'status_{row.id}', '')
+            note = request.POST.get(f'note_{row.id}', '').strip()
+            if status not in valid_statuses:
+                messages.error(request, 'Her öğrenci için geçerli bir yoklama durumu seçin.')
+                return redirect('lesson_detail', lesson_id=lesson.id)
+            if len(note) > 1000:
+                messages.error(request, 'Ders notu 1000 karakterden uzun olamaz.')
+                return redirect('lesson_detail', lesson_id=lesson.id)
+            submitted.append((row, status, note))
+
+        correction_reason = request.POST.get('correction_reason', '').strip()
+        correction_needed = any(row.status and row.status != status for row, status, _ in submitted)
+        if correction_needed and not correction_reason:
+            messages.error(request, 'Kaydedilmiş yoklamayı değiştirmek için kısa bir düzeltme gerekçesi yazın.')
+            return redirect('lesson_detail', lesson_id=lesson.id)
+        if len(correction_reason) > 240:
+            messages.error(request, 'Düzeltme gerekçesi 240 karakterden uzun olamaz.')
+            return redirect('lesson_detail', lesson_id=lesson.id)
+
+        statuses = [status for _, status, _ in submitted]
+        attended = statuses.count(Attendance.Status.ATTENDED)
+        absent = statuses.count(Attendance.Status.ABSENT)
+        next_lesson_status = Lesson.Status.COMPLETED if attended else (
+            Lesson.Status.NO_SHOW if absent else Lesson.Status.PLANNED
+        )
+        if rows and all(status == Attendance.Status.CANCELLED for status in statuses):
+            next_lesson_status = Lesson.Status.CANCELLED
+        if lesson.status == Lesson.Status.CANCELLED and next_lesson_status != Lesson.Status.CANCELLED:
+            overlap = scoped(request).filter(
+                starts_at__lt=lesson.ends_at,
+                ends_at__gt=lesson.starts_at,
+            ).exclude(pk=lesson.pk).exclude(status=Lesson.Status.CANCELLED).exists()
+            if overlap:
+                messages.error(request, 'Bu ders yeniden etkinleştirilemez; aynı saatte başka bir ders bulunuyor.')
+                return redirect('lesson_detail', lesson_id=lesson.id)
+
+        changes = []
+        for row, status, note in submitted:
+            previous_status = row.status
+            previous_note = row.note
+            status_changed = previous_status != status
+            note_changed = previous_note != note
+            if status_changed or note_changed:
+                changes.append({
+                    'student_id': row.student_id,
+                    'from': previous_status,
+                    'to': status,
+                    'note_changed': note_changed,
+                })
+            row.status = status
+            row.note = note
+            row.recorded_at = timezone.now()
+            row.recorded_by = request.user
+            row.save(update_fields=['status', 'note', 'recorded_at', 'recorded_by'])
+            if note and note_changed:
+                LessonNote.objects.create(
+                    workspace=request.user.workspace,
+                    student=row.student,
+                    lesson=lesson,
+                    text=note,
+                    noted_on=timezone.localdate(),
+                    author=request.user,
+                )
+
+        lesson.status = next_lesson_status
+        lesson.save(update_fields=['status', 'updated_at'])
+        record_event(
+            actor=request.user,
+            action='attendance.updated',
+            target=lesson,
+            metadata={
+                'attended': attended,
+                'absent': absent,
+                'participant_count': len(rows),
+                'changes': changes,
+                'correction_reason': correction_reason,
+            },
+        )
     return redirect('lesson_detail', lesson_id=lesson.id)

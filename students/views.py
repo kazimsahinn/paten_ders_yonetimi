@@ -89,25 +89,53 @@ def student_development(request, student_id):
         try:
             evaluated_on = timezone.datetime.strptime(evaluated_on, '%Y-%m-%d').date()
         except ValueError:
-            evaluated_on = timezone.localdate()
+            messages.error(request, 'Değerlendirme tarihi geçerli değil.')
+            return redirect('student_development', student_id=student.id)
+        submissions = []
+        valid_statuses = dict(StudentSkill.Status.choices)
+        for skill in skills:
+            status = request.POST.get(f'status_{skill.id}', '')
+            if not status:
+                continue
+            if status not in valid_statuses:
+                messages.error(request, 'Geçersiz bir beceri durumu gönderildi.')
+                return redirect('student_development', student_id=student.id)
+            note = request.POST.get(f'note_{skill.id}', '').strip()
+            if len(note) > 240:
+                messages.error(request, 'Beceri notu 240 karakterden uzun olamaz.')
+                return redirect('student_development', student_id=student.id)
+            submissions.append((skill, status, note))
         with transaction.atomic():
-            for skill in skills:
-                status = request.POST.get(f'status_{skill.id}', '')
-                if status not in dict(StudentSkill.Status.choices) or not status:
-                    continue
-                note = request.POST.get(f'note_{skill.id}', '').strip()
-                current = assessments.get(skill.id)
+            for skill, status, note in submissions:
+                StudentSkillHistory.objects.get_or_create(
+                    student=student,
+                    skill=skill,
+                    status=status,
+                    evaluated_on=evaluated_on,
+                    note=note,
+                    defaults={'created_by': request.user},
+                )
+                latest = StudentSkillHistory.objects.filter(student=student, skill=skill).order_by(
+                    '-evaluated_on', '-created_at', '-pk',
+                ).first()
+                current = StudentSkill.objects.select_for_update().filter(student=student, skill=skill).first()
                 if current is None:
-                    current = StudentSkill.objects.create(student=student, skill=skill, status=status, evaluated_on=evaluated_on, note=note)
-                    changed = True
-                else:
-                    changed = current.status != status or current.note != note or current.evaluated_on != evaluated_on
-                    current.status = status
-                    current.evaluated_on = evaluated_on
-                    current.note = note
-                    current.save()
-                if changed:
-                    StudentSkillHistory.objects.create(student=student, skill=skill, status=status, evaluated_on=evaluated_on, note=note, created_by=request.user)
+                    StudentSkill.objects.create(
+                        student=student,
+                        skill=skill,
+                        status=latest.status,
+                        evaluated_on=latest.evaluated_on,
+                        note=latest.note,
+                    )
+                elif (
+                    current.status != latest.status
+                    or current.note != latest.note
+                    or current.evaluated_on != latest.evaluated_on
+                ):
+                    current.status = latest.status
+                    current.evaluated_on = latest.evaluated_on
+                    current.note = latest.note
+                    current.save(update_fields=['status', 'evaluated_on', 'note', 'updated_at'])
         messages.success(request, 'Gelişim değerlendirmeleri kaydedildi.')
         return redirect('student_development', student_id=student.id)
     history = student.skill_history.select_related('skill', 'created_by')[:30]

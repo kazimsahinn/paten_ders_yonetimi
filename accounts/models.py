@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from django.utils import timezone
 
 
 class Workspace(models.Model):
@@ -33,3 +34,20 @@ class AuditLog(models.Model):
     class Meta:
         ordering = ['-created_at']
         indexes = [models.Index(fields=['workspace', 'created_at'])]
+
+
+class AuthThrottle(models.Model):
+    """Shared database counter for authentication abuse controls."""
+
+    action = models.CharField(max_length=32)
+    key_hash = models.CharField(max_length=64)
+    attempts = models.PositiveIntegerField(default=0)
+    window_started = models.DateTimeField(default=timezone.now)
+    blocked_until = models.DateTimeField(null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['action', 'key_hash'], name='unique_auth_throttle_key'),
+        ]
+        indexes = [models.Index(fields=['blocked_until'])]

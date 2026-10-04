@@ -103,6 +103,12 @@ CSRF_TRUSTED_ORIGINS = [origin for origin in os.getenv('DJANGO_CSRF_TRUSTED_ORIG
 EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'noreply@patenakisi.local')
 FIELD_ENCRYPTION_KEY = os.getenv('FIELD_ENCRYPTION_KEY', '')
+AUTH_LOGIN_ATTEMPTS = int(os.getenv('AUTH_LOGIN_ATTEMPTS', '5'))
+AUTH_LOGIN_WINDOW_SECONDS = int(os.getenv('AUTH_LOGIN_WINDOW_SECONDS', '900'))
+AUTH_LOGIN_BLOCK_SECONDS = int(os.getenv('AUTH_LOGIN_BLOCK_SECONDS', '900'))
+AUTH_PASSWORD_RESET_ATTEMPTS = int(os.getenv('AUTH_PASSWORD_RESET_ATTEMPTS', '3'))
+AUTH_PASSWORD_RESET_WINDOW_SECONDS = int(os.getenv('AUTH_PASSWORD_RESET_WINDOW_SECONDS', '3600'))
+AUTH_PASSWORD_RESET_BLOCK_SECONDS = int(os.getenv('AUTH_PASSWORD_RESET_BLOCK_SECONDS', '3600'))
 
 # Vercel terminates TLS before forwarding requests to Django. Keep the
 # application aware of the original scheme and enable HTTPS-only protections

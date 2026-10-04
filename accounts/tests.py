@@ -2,20 +2,30 @@ from django.contrib.auth.tokens import default_token_generator
 import json
 import tempfile
 from pathlib import Path
+from unittest.mock import patch
 
 from django.core import management
 from django.test import TestCase, TransactionTestCase, override_settings
+from django.test import RequestFactory
 from django.urls import reverse
 from django.utils.http import urlsafe_base64_encode
 from django.utils.encoding import force_bytes
 from django.core import mail
 
-from .models import AuditLog, User, Workspace
+from .models import AuditLog, AuthThrottle, User, Workspace
+from .throttling import client_address
 from students.models import Student, StudentSafetyProfile
 from cryptography.fernet import Fernet
 
 
 class AuthenticationTests(TestCase):
+    def test_vercel_client_address_uses_platform_header(self):
+        request = RequestFactory().get(
+            '/', HTTP_X_VERCEL_FORWARDED_FOR='198.51.100.24', REMOTE_ADDR='127.0.0.1',
+        )
+        with patch.dict('os.environ', {'VERCEL': '1'}):
+            self.assertEqual(client_address(request), '198.51.100.24')
+
     def test_login_redirects_to_dashboard(self):
         workspace = Workspace.objects.create(name='Test çalışma alanı')
         User.objects.create_user(
@@ -23,6 +33,42 @@ class AuthenticationTests(TestCase):
         )
         response = self.client.post(reverse('login'), {'username': 'egitmen@example.com', 'password': 'GuvenliTest123!'})
         self.assertRedirects(response, reverse('dashboard'))
+
+    @override_settings(
+        AUTH_LOGIN_ATTEMPTS=2,
+        AUTH_LOGIN_WINDOW_SECONDS=60,
+        AUTH_LOGIN_BLOCK_SECONDS=60,
+    )
+    def test_login_is_rate_limited_after_repeated_failures(self):
+        workspace = Workspace.objects.create(name='Limit çalışma alanı')
+        User.objects.create_user(
+            username='limit@example.com', email='limit@example.com', password='GuvenliTest123!', workspace=workspace
+        )
+
+        for _ in range(2):
+            response = self.client.post(reverse('login'), {
+                'username': 'limit@example.com', 'password': 'YanlisParola!',
+            }, REMOTE_ADDR='192.0.2.10')
+            self.assertEqual(response.status_code, 200)
+        response = self.client.post(reverse('login'), {
+            'username': 'limit@example.com', 'password': 'GuvenliTest123!',
+        }, REMOTE_ADDR='192.0.2.10')
+
+        self.assertEqual(response.status_code, 429)
+        self.assertEqual(response['Retry-After'], '60')
+        self.assertNotIn('_auth_user_id', self.client.session)
+
+    def test_logout_rejects_get_and_accepts_post(self):
+        workspace = Workspace.objects.create(name='Çıkış çalışma alanı')
+        user = User.objects.create_user(
+            username='logout@example.com', email='logout@example.com', password='GuvenliTest123!', workspace=workspace
+        )
+        self.client.force_login(user)
+
+        self.assertEqual(self.client.get(reverse('logout')).status_code, 405)
+        self.assertIn('_auth_user_id', self.client.session)
+        self.assertRedirects(self.client.post(reverse('logout')), reverse('login'))
+        self.assertNotIn('_auth_user_id', self.client.session)
 
     def test_anonymous_user_is_redirected_from_student_list(self):
         response = self.client.get(reverse('student_list'))
@@ -62,6 +108,31 @@ class AuthenticationTests(TestCase):
         self.assertRedirects(response, reverse('password_reset_done'))
         self.assertEqual(len(mail.outbox), 1)
         self.assertIn('parola yenileme', mail.outbox[0].subject.lower())
+
+    @override_settings(
+        EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend',
+        AUTH_PASSWORD_RESET_ATTEMPTS=2,
+        AUTH_PASSWORD_RESET_WINDOW_SECONDS=60,
+        AUTH_PASSWORD_RESET_BLOCK_SECONDS=60,
+    )
+    def test_password_reset_is_rate_limited(self):
+        workspace = Workspace.objects.create(name='Kurtarma limit alanı')
+        User.objects.create_user(
+            username='reset-limit@example.com', email='reset-limit@example.com', password='GuvenliTest123!', workspace=workspace
+        )
+
+        for _ in range(2):
+            response = self.client.post(
+                reverse('password_reset'), {'email': 'reset-limit@example.com'}, REMOTE_ADDR='192.0.2.20',
+            )
+            self.assertRedirects(response, reverse('password_reset_done'))
+        response = self.client.post(
+            reverse('password_reset'), {'email': 'reset-limit@example.com'}, REMOTE_ADDR='192.0.2.20',
+        )
+
+        self.assertEqual(response.status_code, 429)
+        self.assertEqual(response['Retry-After'], '60')
+        self.assertEqual(len(mail.outbox), 2)
 
     def test_password_reset_changes_password_with_valid_token(self):
         workspace = Workspace.objects.create(name='Test çalışma alanı')
@@ -154,9 +225,14 @@ class BackupRestoreTests(TransactionTestCase):
             path = Path(temp_dir) / 'backup.json'
             path.write_text(json.dumps(payload, ensure_ascii=False), encoding='utf-8')
             management.call_command('flush', interactive=False, verbosity=0)
+            AuthThrottle.objects.create(action='login_address', key_hash='a' * 40, attempts=1)
             management.call_command('restore_workspace_backup', path, confirm_empty_database=True)
 
         restored = StudentSafetyProfile.objects.get(student__first_name='Geri')
         self.assertEqual(restored.form_values()['safety_note'], 'Geri yükleme testi güvenlik notu.')
         self.assertEqual(Workspace.objects.count(), 1)
         self.assertEqual(User.objects.count(), 1)
+        self.assertEqual(AuthThrottle.objects.count(), 1)
+        restored_workspace_id = Workspace.objects.get().pk
+        new_workspace = Workspace.objects.create(name='Geri yükleme sonrası')
+        self.assertGreater(new_workspace.pk, restored_workspace_id)

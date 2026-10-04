@@ -9,7 +9,7 @@ from lessons.models import Attendance, Lesson, Location
 
 from cryptography.fernet import Fernet
 
-from .models import Skill, Student, StudentLevelHistory, StudentSafetyProfile, StudentSkillHistory
+from .models import Skill, Student, StudentLevelHistory, StudentSafetyProfile, StudentSkill, StudentSkillHistory
 
 
 class StudentFeatureTests(TestCase):
@@ -97,3 +97,35 @@ class StudentFeatureTests(TestCase):
         history = StudentSkillHistory.objects.get(student=self.student, skill=skill)
         self.assertEqual(history.evaluated_on, date(2026, 9, 26))
         self.assertEqual(history.created_by, self.user)
+
+    def test_backdated_development_history_does_not_replace_current_status(self):
+        skill = Skill.objects.create(workspace=self.workspace, name='Denge')
+        url = reverse('student_development', args=[self.student.id])
+        self.client.post(url, {
+            'evaluated_on': '2026-10-04', f'status_{skill.id}': StudentSkill.Status.MASTERED,
+            f'note_{skill.id}': 'Güncel değerlendirme.',
+        })
+
+        response = self.client.post(url, {
+            'evaluated_on': '2026-09-01', f'status_{skill.id}': StudentSkill.Status.PRACTICING,
+            f'note_{skill.id}': 'Geçmiş değerlendirme.',
+        })
+
+        self.assertRedirects(response, url)
+        current = StudentSkill.objects.get(student=self.student, skill=skill)
+        self.assertEqual(current.status, StudentSkill.Status.MASTERED)
+        self.assertEqual(current.evaluated_on, date(2026, 10, 4))
+        self.assertEqual(StudentSkillHistory.objects.filter(student=self.student, skill=skill).count(), 2)
+
+    def test_repeated_development_submission_does_not_duplicate_history(self):
+        skill = Skill.objects.create(workspace=self.workspace, name='Slalom')
+        url = reverse('student_development', args=[self.student.id])
+        payload = {
+            'evaluated_on': '2026-10-04', f'status_{skill.id}': StudentSkill.Status.GOOD,
+            f'note_{skill.id}': 'Tek kayıt.',
+        }
+
+        self.client.post(url, payload)
+        self.client.post(url, payload)
+
+        self.assertEqual(StudentSkillHistory.objects.filter(student=self.student, skill=skill).count(), 1)
