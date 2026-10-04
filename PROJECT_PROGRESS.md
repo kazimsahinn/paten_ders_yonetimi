@@ -1,6 +1,6 @@
 # Proje Durumu
 
-**Son güncelleme:** 26 Eylül 2026  
+**Son güncelleme:** 4 Ekim 2026  
 **Dal:** `main`  
 **Son kod commit’i:** `04aac99` — `Align mobile account menu`  
 **Remote durumu:** `origin/main` ile senkron
@@ -31,6 +31,7 @@ Tamamlanan temel işler:
 - Gerçek telefonda mobil ders günü akışı test edildi; menüler ve kayıt işlemleri başarılı.
 - Production ortamına `DATABASE_URL`, `DJANGO_SECRET_KEY` ve `FIELD_ENCRYPTION_KEY` gizli değişkenleri eklendi.
 - Production yeniden dağıtımı sonrası kök URL’nin 302 giriş yönlendirmesi, `/giris/` sayfasının 200 yanıtı ve temiz çalışma zamanı logları doğrulandı; SQLite dosya erişimi kaynaklı 500 hatası giderildi.
+- Supabase `public` şemasındaki 22 Django tablosunda RLS etkinleştirildi; `anon` ve `authenticated` rollerine erişimi reddeden politikalar eklendi ve Security Advisor temizlendi.
 
 ## Doğrulama
 
@@ -39,6 +40,7 @@ Tamamlanan temel işler:
 - `manage.py check --deploy` başarılı; yalnızca isteğe bağlı HSTS uyarısı kaldı.
 - Migration kontrolü temiz.
 - Yedek geri yükleme provası test veritabanında başarılı.
+- Supabase doğrulaması: 22/22 tablo RLS etkin, 22/22 tabloda politika mevcut, Security Advisor `lints: []`.
 
 ## Sıradaki işler
 
