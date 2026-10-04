@@ -18,9 +18,9 @@ Tamamlanan temel işler:
 - Çalışma alanı kapsamlı JSON yedekleme, yedek doğrulama ve boş veritabanına geri yükleme provası.
 - Kullanıcı dostu Türkçe 404 sayfası.
 - `DEBUG=0` durumunda Vercel proxy arkasında HTTPS yönlendirmesi ve güvenli oturum/CSRF çerezleri.
-- `accounts.0002_auditlog` ve `students.0004_studentsafetyprofile` migration’ları Supabase’e uygulandı.
+- `accounts.0002_auditlog`, `accounts.0003_auththrottle` ve `students.0004_studentsafetyprofile` migration’ları Supabase’e uygulandı.
 - Vercel preview ve production dağıtımları doğrulandı.
-- Production adresi `https://patentakip.vercel.app` olarak ayarlandı; eski `paten-proje.vercel.app` aliası kaldırıldı.
+- Production adresi `https://patentakip.vercel.app` olarak ayarlandı; `paten-proje.vercel.app` uyumluluk adresi de aynı son production dağıtımına yönlendirildi.
 - Production giriş sayfası, özel 404 sayfası ve statik dosya sunumu Vercel CLI bypass testiyle kontrol edildi.
 - Vercel Standard Protection etkinleştirildi; production domain normal tarayıcıda herkese açık, preview/deployment adresleri korumalı.
 - `https://patentakip.vercel.app/giris/` ve özel `/asdfa` 404 sayfası normal tarayıcıda doğrulandı.
@@ -42,12 +42,12 @@ Tamamlanan temel işler:
 - `manage.py check` başarılı.
 - `manage.py check --deploy` başarılı; yalnızca isteğe bağlı HSTS uyarısı kaldı.
 - Migration kontrolü temiz.
+- Canlı giriş akışı doğrulandı: ilk beş hatalı deneme 200, altıncı deneme 429 döndürdü ve çalışma zamanı loglarında yeni 500 hatası oluşmadı.
 - Yedek geri yükleme provası test veritabanında başarılı.
 - Supabase doğrulaması: 22/22 tablo RLS etkin, 22/22 tabloda politika mevcut, Security Advisor `lints: []`.
 
 ## Sıradaki işler
 
-1. `accounts.0003_auththrottle` migration’ını Supabase veritabanına uygulamak.
-2. Fotoğraf ve Supabase Storage özelliğini dosya güvenliği gereksinimleriyle birlikte pilot sonrasına bırakmak.
+1. Fotoğraf ve Supabase Storage özelliğini dosya güvenliği gereksinimleriyle birlikte pilot sonrasına bırakmak.
 
 Bu dosya her commit ve push işleminden sonra güncellenecektir.
